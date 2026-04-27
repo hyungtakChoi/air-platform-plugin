@@ -1,0 +1,4 @@
+.DS_Store
+.omc/
+.claude/dashboard.config.json
+*.local

@@ -1,0 +1,21 @@
+{
+  "name": "air-platform",
+  "owner": {
+    "name": "AIR Platform Unit"
+  },
+  "metadata": {
+    "description": "AIR Platform 팀 개발 생산성 플러그인 모음"
+  },
+  "plugins": [
+    {
+      "name": "commit-plugin",
+      "source": "./plugins/commit-plugin",
+      "description": "Git 커밋 메시지 자동 생성 및 Jira 이슈 연동"
+    },
+    {
+      "name": "push-plugin",
+      "source": "./plugins/push-plugin",
+      "description": "Git push 및 DevPulse Dashboard 전송"
+    }
+  ]
+}

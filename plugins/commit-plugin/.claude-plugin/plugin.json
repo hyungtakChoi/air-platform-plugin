@@ -1,0 +1,5 @@
+{
+  "name": "commit-plugin",
+  "description": "Git 커밋 메시지 자동 생성 및 Jira 이슈 연동 플러그인",
+  "version": "2.0.0"
+}
