@@ -34,26 +34,19 @@ git branch --show-current
    ```
    parent = {티켓ID} ORDER BY created DESC
    ```
-2. 서브태스크 목록을 표시하고 사용자에게 선택 요청 (복수 선택 가능):
-   ```
-   이 커밋과 관련된 서브태스크를 선택하세요:
-   [ ] AS-100: 로그인 UI 구현
-   [ ] AS-101: API 연동
-   [ ] AS-102: 에러 처리
-   [ ] 해당 없음 (서브태스크 연결 안 함)
-   [ ] 새 서브태스크 생성
-   ```
-3. "해당 없음" 선택 시 → 스토리 티켓(AS-99) 자체를 Refs로 사용
+2. `AskUserQuestion` 도구로 선택지를 표시합니다 (multiSelect: true):
+   - 각 서브태스크를 옵션으로 표시 (label: 티켓ID, description: 요약)
+   - "해당 없음 — 스토리만 연결" 옵션 포함
+   - "새 서브태스크 생성" 옵션 포함
+3. "해당 없음" 선택 시 → 스토리 티켓 자체를 Refs로 사용
 4. "새 서브태스크 생성" 선택 시 → Step 0.3으로 이동
 
 #### 0.2 시나리오 B: 서브태스크 티켓
 
 이슈 타입이 Sub-task/Subtask이면:
-- 해당 티켓을 자동 선택하고 사용자에게 확인만 요청:
-  ```
-  연결된 Jira 티켓: AS-100 [로그인 UI 구현]
-  이 티켓으로 진행하시겠어요? (Y/n)
-  ```
+`AskUserQuestion` 도구로 확인 요청:
+- question: "연결된 Jira 티켓: {티켓ID} [{요약}] — 이 티켓으로 진행할까요?"
+- options: ["네, 이 티켓으로 진행", "다른 티켓 선택 (검색)"]
 
 #### 0.3 시나리오 C: 브랜치에 티켓 ID 없음
 
@@ -69,19 +62,15 @@ project = {브랜치에서 추출한 프로젝트 키, 없으면 dashboard.confi
 
 **Step C-2: 직접 입력**
 
-목록에 없거나 "없음" 선택 시:
-```
-Jira 티켓 ID를 직접 입력하세요 (예: AS-123) — Enter 스킵
-```
+`AskUserQuestion` 도구로 입력 요청:
+- question: "연결할 Jira 티켓 ID를 입력하세요 (예: BI-123)"
+- options: ["직접 입력", "티켓 없이 커밋", "새 서브태스크 생성"]
 
 **Step C-3: 새 서브태스크 생성**
 
-Enter 스킵 시:
-```
-새 Jira 서브태스크를 생성하시겠어요? (y/N)
-```
-- Y 선택 시: 부모 스토리 ID 입력 요청 후 `mcp__claude_ai_Atlassian__createJiraIssue`로 생성
-- N 선택 시: Refs 없이 커밋 진행
+"새 서브태스크 생성" 선택 시:
+`AskUserQuestion` 도구로 부모 스토리 ID 입력 요청 후 `mcp__claude_ai_Atlassian__createJiraIssue`로 생성.
+"티켓 없이 커밋" 선택 시: Refs 없이 커밋 진행.
 
 #### 0.4 MCP 연결 실패 처리
 
@@ -92,26 +81,18 @@ Enter 스킵 시:
 
 ### Step 0.5: 작업 시간 입력
 
-Jira 티켓이 선택된 경우에만 표시:
-
-```
-작업 시간을 입력하세요 (예: 2h, 30m, 1h30m) — Enter 스킵
-```
-
+Jira 티켓이 선택된 경우에만 `AskUserQuestion` 도구로 표시:
+- question: "이 작업에 소요된 시간을 선택하세요"
+- options: ["30m", "1h", "2h", "3h 이상 / 직접 입력", "스킵 (기록 안 함)"]
 - 지원 형식: `Xh`, `Xm`, `XhYm`
-- Enter 스킵 시 worklog 등록 안 함
 
 ---
 
 ### Step 0.6: Jira 추가 컨텍스트 입력
 
-Jira 티켓이 선택된 경우에만 표시:
-
-```
-Jira 티켓에 남길 추가 컨텍스트를 입력하세요.
-(커밋 메시지에 담지 못하는 배경, 시도한 방법, 주의사항 등)
-— Enter 스킵
-```
+Jira 티켓이 선택된 경우에만 `AskUserQuestion` 도구로 표시:
+- question: "Jira 티켓에 남길 추가 컨텍스트가 있나요? (커밋 메시지에 담지 못한 배경, 시도한 방법, 주의사항 등)"
+- options: ["직접 입력", "스킵"]
 
 ---
 
