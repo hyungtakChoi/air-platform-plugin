@@ -1,5 +1,11 @@
 ---
-description: Git 커밋 메시지를 자동으로 생성하고 Jira 이슈를 연동합니다
+name: commit
+description: Git 커밋 메시지 자동 생성 + Jira 티켓 연동
+argument-hint: "[커밋 메시지 힌트 (선택)]"
+pipeline: [commit, push]
+next-skill: push-plugin:push
+handoff: .omc/state/commit-handoff.json
+level: 2
 ---
 
 version: 2.0.0
@@ -9,6 +15,22 @@ version: 2.0.0
 변경사항을 분석하여 git commit 메시지를 생성하고, Jira 이슈에 작업 내용을 자동으로 기록하는 에이전트입니다.
 
 > **Note**: 평가(evaluation)와 Dashboard API 호출은 `/push`를 사용하세요.
+
+<Execution_Policy>
+- 사용자에게 질문할 때 **(Y/n) 텍스트나 마크다운 테이블로 묻지 마세요** — 반드시 `AskUserQuestion` 도구를 실제로 호출하여 클릭 가능한 옵션 UI를 표시하세요
+- 각 단계에 "Use `AskUserQuestion` with..." 표시가 있으면 해당 파라미터로 도구를 즉시 호출합니다
+- staged 파일이 있으면 해당 파일만 커밋하고, 절대로 다른 파일을 추가 stage하지 않습니다
+- staged 파일이 없는 경우에만 모든 변경 파일을 auto-stage합니다
+- 포맷 검증 통과 시 사용자 확인 없이 자동으로 커밋을 실행합니다
+- Step 0 티켓 선택·작업 시간은 스킵 가능하나, 티켓이 선택된 경우 추가 컨텍스트(Step 0.6) 입력은 필수입니다
+- 티켓 선택·작업 시간을 모두 스킵하면 기존 v1.1.0과 동일하게 동작합니다
+- 커밋 메시지는 반드시 한글로 작성합니다 (prefix와 scope는 영문 유지, 요약 50자 이내)
+- 상세 설명은 변경 사항을 bullet point로 구체적으로 나열합니다
+- 사용자가 커밋 메시지 힌트를 제공하면 해당 내용을 포맷에 맞게 반영합니다
+- Jira API 실패는 커밋을 막지 않습니다 — 경고 출력 후 커밋 진행
+- 커밋 완료 후 `.omc/state/commit-handoff.json`에 handoff 정보를 기록합니다 (push-plugin이 읽음)
+- Edge cases: unstaged changes만 있으면 auto-stage, detached HEAD면 경고, Jira MCP 미설치면 Step 0 건너뜀
+</Execution_Policy>
 
 ---
 
@@ -34,19 +56,24 @@ git branch --show-current
    ```
    parent = {티켓ID} ORDER BY created DESC
    ```
-2. `AskUserQuestion` 도구로 선택지를 표시합니다 (multiSelect: true):
-   - 각 서브태스크를 옵션으로 표시 (label: 티켓ID, description: 요약)
-   - "해당 없음 — 스토리만 연결" 옵션 포함
-   - "새 서브태스크 생성" 옵션 포함
+2. **→ AskUserQuestion 도구를 즉시 호출**합니다:
+   - questions[0].question: "연결할 서브태스크를 선택하세요"
+   - questions[0].header: "서브태스크 선택"
+   - questions[0].multiSelect: true
+   - questions[0].options: 각 서브태스크 (label: 티켓ID, description: 요약) + "해당 없음 — 스토리만 연결" + "새 서브태스크 생성"
 3. "해당 없음" 선택 시 → 스토리 티켓 자체를 Refs로 사용
 4. "새 서브태스크 생성" 선택 시 → Step 0.3으로 이동
 
-#### 0.2 시나리오 B: 서브태스크 티켓
+#### 0.2 시나리오 B: 단순 작업(Task) 또는 서브태스크 티켓
 
-이슈 타입이 Sub-task/Subtask이면:
-`AskUserQuestion` 도구로 확인 요청:
-- question: "연결된 Jira 티켓: {티켓ID} [{요약}] — 이 티켓으로 진행할까요?"
-- options: ["네, 이 티켓으로 진행", "다른 티켓 선택 (검색)"]
+이슈 타입이 Task/Sub-task이면 **→ AskUserQuestion 도구를 즉시 호출**합니다:
+
+- questions[0].question: "연결된 Jira 티켓을 확인하세요"
+- questions[0].header: "Jira 티켓"
+- questions[0].multiSelect: false
+- questions[0].options:
+  - label: "{티켓ID}: {요약}", description: "상태: {status}"
+  - label: "다른 티켓 검색", description: "다른 이슈를 검색합니다"
 
 #### 0.3 시나리오 C: 브랜치에 티켓 ID 없음
 
@@ -55,22 +82,34 @@ git branch --show-current
 **Step C-1: Jira 이슈 검색**
 
 `mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql`로 관련 이슈 검색:
-```
-project = {브랜치에서 추출한 프로젝트 키, 없으면 dashboard.config.json의 jiraProjectKey} AND assignee = currentUser() AND updated >= -14d ORDER BY updated DESC
-```
-검색 결과 목록을 표시하고 선택 요청. "없음" 옵션 포함.
+- JQL: `project = {브랜치에서 추출한 프로젝트 키, 없으면 dashboard.config.json의 jiraProjectKey} AND assignee = currentUser() AND updated >= -14d ORDER BY updated DESC`
+
+검색 결과로 **→ AskUserQuestion 도구를 즉시 호출**합니다:
+- questions[0].question: "연결할 Jira 이슈를 선택하세요"
+- questions[0].header: "Jira 이슈 선택"
+- questions[0].multiSelect: false
+- questions[0].options: 검색된 각 이슈 (label: 티켓ID, description: 요약) + "없음 — 티켓 없이 커밋" + "직접 입력"
 
 **Step C-2: 직접 입력**
 
-`AskUserQuestion` 도구로 입력 요청:
-- question: "연결할 Jira 티켓 ID를 입력하세요 (예: BI-123)"
-- options: ["직접 입력", "티켓 없이 커밋", "새 서브태스크 생성"]
+"직접 입력" 선택 시 **→ AskUserQuestion 도구를 즉시 호출**합니다:
+- questions[0].question: "연결할 Jira 티켓 ID를 입력하세요 (예: BI-123)"
+- questions[0].header: "티켓 ID 직접 입력"
+- questions[0].multiSelect: false
+- questions[0].options:
+  - label: "직접 입력", description: "티켓 ID를 입력하세요"
+  - label: "새 서브태스크 생성", description: "부모 스토리 아래 서브태스크를 새로 만듭니다"
 
 **Step C-3: 새 서브태스크 생성**
 
-"새 서브태스크 생성" 선택 시:
-`AskUserQuestion` 도구로 부모 스토리 ID 입력 요청 후 `mcp__claude_ai_Atlassian__createJiraIssue`로 생성.
-"티켓 없이 커밋" 선택 시: Refs 없이 커밋 진행.
+"새 서브태스크 생성" 선택 시 **→ AskUserQuestion 도구를 즉시 호출**합니다:
+- questions[0].question: "서브태스크를 생성할 부모 스토리 ID를 입력하세요"
+- questions[0].header: "부모 스토리 ID"
+- questions[0].multiSelect: false
+- questions[0].options: label: "직접 입력"
+
+입력 후 `mcp__claude_ai_Atlassian__createJiraIssue`로 서브태스크 생성.
+"없음 — 티켓 없이 커밋" 선택 시: Refs 없이 커밋 진행.
 
 #### 0.4 MCP 연결 실패 처리
 
@@ -81,18 +120,37 @@ project = {브랜치에서 추출한 프로젝트 키, 없으면 dashboard.confi
 
 ### Step 0.5: 작업 시간 입력
 
-Jira 티켓이 선택된 경우에만 `AskUserQuestion` 도구로 표시:
-- question: "이 작업에 소요된 시간을 선택하세요"
-- options: ["30m", "1h", "2h", "3h 이상 / 직접 입력", "스킵 (기록 안 함)"]
-- 지원 형식: `Xh`, `Xm`, `XhYm`
+Jira 티켓이 선택된 경우에만 **→ AskUserQuestion 도구를 즉시 호출**합니다:
+
+- questions[0].question: "이 작업에 소요된 시간을 선택하세요"
+- questions[0].header: "작업 시간"
+- questions[0].multiSelect: false
+- questions[0].options:
+  - label: "1h", description: "1시간"
+  - label: "2h", description: "2시간"
+  - label: "3h", description: "3시간"
+  - label: "4h", description: "4시간"
+  - label: "직접 입력", description: "정수 시간 단위로 입력 (예: 5h, 6h)"
+
+- 지원 형식: `Xh` (정수 시간 단위만, 예: `1h`, `3h`)
+- "직접 입력" 선택 시 추가로 시간값 입력 받기
 
 ---
 
 ### Step 0.6: Jira 추가 컨텍스트 입력
 
-Jira 티켓이 선택된 경우에만 `AskUserQuestion` 도구로 표시:
-- question: "Jira 티켓에 남길 추가 컨텍스트가 있나요? (커밋 메시지에 담지 못한 배경, 시도한 방법, 주의사항 등)"
-- options: ["직접 입력", "스킵"]
+Jira 티켓이 선택된 경우에만 **→ AskUserQuestion 도구를 즉시 호출**합니다:
+
+- questions[0].question: "Jira 티켓에 남길 추가 컨텍스트를 입력하세요 (커밋 메시지에 담지 못한 배경, 시도한 방법, 주의사항 등)"
+- questions[0].header: "추가 컨텍스트"
+- questions[0].multiSelect: false
+- questions[0].options:
+  - label: "직접 입력", description: "작업 배경, 이슈 원인, 주의사항 등 자유 입력"
+
+- 입력은 **필수**이며 스킵할 수 없습니다
+- 사용자가 입력한 원문을 LLM이 자동으로 정제하여 Jira 코멘트에 등록합니다
+  - 문장을 다듬고 구조화하되, 사용자의 의도와 핵심 내용은 그대로 보존
+  - 정제 후 Jira에 등록되는 내용을 사용자에게 미리 보여줄 필요 없음 (자동 처리)
 
 ---
 
@@ -310,15 +368,27 @@ Jira 연동 중 오류가 발생했습니다: {오류 내용}
 
 ---
 
-## Important Guidelines
+<Tool_Usage>
+- Use `AskUserQuestion` for all user-facing choices — provides clickable UI with contextual options. Never use text prompts or (Y/n) questions.
+- Use `mcp__claude_ai_Atlassian__getJiraIssue` to fetch ticket info from branch name
+- Use `mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql` to list subtasks or search issues
+- Use `mcp__claude_ai_Atlassian__createJiraIssue` to create new subtasks when requested
+- Use `mcp__claude_ai_Atlassian__addCommentToJiraIssue` to post commit summary to Jira after commit
+- Use `mcp__claude_ai_Atlassian__addWorklogToJiraIssue` to log work time after commit
+- Use `git branch --show-current`, `git status`, `git diff --staged` for git state
+- Use `git commit -m` with HEREDOC for safe multiline commit messages
+- Use `git rev-parse HEAD` after commit to capture commit ID
 
-- **staged 파일이 있으면 해당 파일만 커밋하고, 절대로 다른 파일을 추가 stage하지 않는다**
-- staged 파일이 없는 경우에만 모든 변경 파일을 auto-stage한다
-- **포맷 검증 통과 시 사용자 확인 없이 자동으로 커밋을 실행한다**
-- **Step 0의 모든 Jira 입력은 Enter로 스킵 가능하며, 모두 스킵하면 기존 v1.1.0과 동일하게 동작한다**
-- Jira API 실패는 커밋을 막지 않는다 — 경고 출력 후 커밋 진행
-- 커밋 메시지는 반드시 한글로 작성 (prefix와 scope는 영문 유지)
-- 요약 메시지는 50자 이내로 간결하게 작성
-- 상세 설명은 변경 사항을 bullet point로 구체적으로 나열
-- 사용자가 커밋 메시지 내용을 제공하면 해당 내용을 포맷에 맞게 반영
-- Handle edge cases gracefully: unstaged changes, detached HEAD, Jira MCP 미설치
+**Handoff**: After a successful commit, write `.omc/state/commit-handoff.json`:
+```json
+{
+  "commitId": "<sha>",
+  "branch": "<branch>",
+  "jiraTickets": ["<ticket1>", "<ticket2>"],
+  "filesChanged": <n>,
+  "additions": <n>,
+  "deletions": <n>
+}
+```
+This file is consumed by `push-plugin:push` in the next pipeline step.
+</Tool_Usage>
