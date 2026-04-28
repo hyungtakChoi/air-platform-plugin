@@ -110,6 +110,7 @@ Use `AskUserQuestion` with:
 - parent: {선택한 스토리 ID}
 - summary: {확인된 제목}
 - project: {projectKey}
+- description: LLM이 git diff 기반으로 자동 생성 — 변경된 파일, 작업 목적, 주요 변경 내용을 2-3문장으로 요약
 
 **"없어 — 독립 Task 생성" 선택 시:**
 
@@ -127,6 +128,7 @@ Use `AskUserQuestion` with:
 - issuetype: Task
 - summary: {확인된 제목}
 - project: {projectKey}
+- description: LLM이 git diff 기반으로 자동 생성 — 변경된 파일, 작업 목적, 주요 변경 내용을 2-3문장으로 요약
 
 **"티켓 없이 커밋" 선택 시:** Refs 없이 커밋 진행
 
