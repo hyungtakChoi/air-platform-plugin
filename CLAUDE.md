@@ -4,8 +4,8 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 ## 프로젝트 개요
 
-AIR Platform 팀 전용 Claude Code 플러그인 모음입니다.
-개발자가 커밋/푸쉬만 하면 Jira 연동, 생산성 측정, Dashboard 기록이 자동으로 처리됩니다.
+AIR Platform 팀 전용 Claude Code 플러그인입니다.
+개발자가 `/commit`만 실행하면 Jira 연동과 커밋 메시지 자동 생성이 처리됩니다.
 
 ## 아키텍처
 
@@ -14,51 +14,36 @@ air-platform-plugin/
 ├── .claude-plugin/
 │   └── marketplace.json      # 플러그인 마켓플레이스 정의
 └── plugins/
-    ├── commit-plugin/        # 커밋 메시지 자동 생성 + Jira 연동
-    │   ├── .claude-plugin/plugin.json
-    │   └── skills/commit/SKILL.md
-    └── push-plugin/          # DevPulse Dashboard 전송 + Git Push
+    └── commit-plugin/        # 커밋 메시지 자동 생성 + Jira 연동
         ├── .claude-plugin/plugin.json
-        └── skills/push/SKILL.md
+        └── skills/commit/SKILL.md
 ```
 
-## 플러그인 워크플로우
+## commit-plugin v3.0.0 (`/commit`) 워크플로우
 
-### commit-plugin v2.0.0 (`/commit`)
-1. Jira 티켓 확인 (브랜치명 추출 → 서브태스크 선택 or 검색 or 생성)
-2. 작업 시간 입력 (선택)
-3. Jira 추가 컨텍스트 입력 (선택)
-4. Git 상태 확인 (staged 파일 우선)
-5. 변경사항 분석
-6. 커밋 메시지 생성
-7. 포맷 검증
-8. 커밋 실행 + Jira 코멘트/worklog 등록 (동시)
+```
+브랜치 티켓 ID 추출
+  ├── 있음 (Task/Sub-task) → 티켓 확인 → 맞아/아니야
+  ├── 있음 (Story/Epic)   → 서브태스크 multiSelect → 없으면 새로 만들기
+  └── 없음                → 새로 만들기
 
-### push-plugin v1.0.7 (`/push`)
-1. 설정 로드 (`.claude/dashboard.config.json`)
-2. Unpushed 커밋 수집
-3. Git diff 분석 및 평가 (complexity, volume, thinking, others)
-4. 평가 검증
-5. API Input 검증
-6. Dashboard API 전송 (GraphQL)
-7. Git Push 실행
+새로 만들기:
+  → Jira 스프린트 스토리 목록 조회
+  → LLM이 변경사항 기반 관련 스토리 추천
+  → 스토리 선택 → 서브태스크 생성 (LLM 제목 제안)
+  → 없으면 독립 Task 생성 (LLM 제목 제안)
 
-## 설정 파일
-
-사용자 프로젝트의 `.claude/dashboard.config.json` (gitignore 필수):
-```json
-{
-  "developer": { "email": "your-email@mz.co.kr" },
-  "product": { "id": "team-uuid/product-uuid" },
-  "apiKey": "your-api-key"
-}
+→ 작업 시간 입력 (선택)
+→ 추가 컨텍스트 입력 (필수)
+→ 커밋 메시지 자동 생성 → git commit
+→ Jira 코멘트 + worklog 등록
 ```
 
 ## Jira 연동
 
-- Jira 프로젝트: `AS` (mzdevs.atlassian.net)
-- 인증: MCP Atlassian 도구 사용 (별도 토큰 불필요)
-- 브랜치 패턴: `AS-\d+` (예: `feature/AS-985-description`)
+- 인증: MCP Atlassian 도구 사용 (`mcp__claude_ai_Atlassian__*`)
+- 브랜치 패턴: `[A-Z]+-\d+` (예: `feature/BI-32-desc`, `fix/AS-985`)
+- 지원 프로젝트: BI, AS, COM 등 모든 Jira 프로젝트
 
 ## 커밋 메시지 포맷
 
@@ -68,7 +53,7 @@ air-platform-plugin/
 <상세 설명>
 - 변경 사항 1
 
-Refs: AS-100, AS-101
+Refs: BI-100, BI-101
 
 Generated-By: Claude Code
 ```
