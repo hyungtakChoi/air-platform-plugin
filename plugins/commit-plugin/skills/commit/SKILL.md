@@ -21,7 +21,8 @@ git branch --show-current
 ```
 
 브랜치명에서 Jira 티켓 ID를 추출합니다.
-지원 패턴: `AS-\d+` (예: `feature/AS-99`, `feature/20251217-AS-985-desc`, `fix-AS-2828-error`)
+지원 패턴: `[A-Z]+-\d+` (예: `feature/AS-99`, `feature/BI-123`, `fix/COM-456-desc`)
+추출된 티켓 ID에서 프로젝트 키도 파악합니다 (예: `BI-23` → 프로젝트 키 `BI`)
 
 #### 0.1 시나리오 A: 스토리/이슈 티켓
 
@@ -62,7 +63,7 @@ git branch --show-current
 
 `mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql`로 관련 이슈 검색:
 ```
-project = AS AND assignee = currentUser() AND updated >= -14d ORDER BY updated DESC
+project = {브랜치에서 추출한 프로젝트 키, 없으면 dashboard.config.json의 jiraProjectKey} AND assignee = currentUser() AND updated >= -14d ORDER BY updated DESC
 ```
 검색 결과 목록을 표시하고 선택 요청. "없음" 옵션 포함.
 
