@@ -88,7 +88,7 @@ git branch --show-current
 - questions[0].question: "연결할 Jira 이슈를 선택하세요"
 - questions[0].header: "Jira 이슈 선택"
 - questions[0].multiSelect: false
-- questions[0].options: 검색된 각 이슈 (label: 티켓ID, description: 요약) + "없음 — 티켓 없이 커밋" + "직접 입력"
+- questions[0].options: 검색된 각 이슈 (label: 티켓ID, description: 요약) + "직접 입력 (티켓 ID 직접 입력)" + "새 서브태스크 생성" + "없음 — 티켓 없이 커밋"
 
 **Step C-2: 직접 입력**
 
