@@ -88,7 +88,7 @@ git branch --show-current
 - questions[0].question: "연결할 Jira 이슈를 선택하세요"
 - questions[0].header: "Jira 이슈 선택"
 - questions[0].multiSelect: false
-- questions[0].options: 검색된 각 이슈 (label: 티켓ID, description: 요약) + "직접 입력 (티켓 ID 직접 입력)" + "새 서브태스크 생성" + "없음 — 티켓 없이 커밋"
+- questions[0].options: 검색된 각 이슈 (label: 티켓ID, description: 요약) + "직접 입력 (티켓 ID 직접 입력)" + "새 Task 생성" + "없음 — 티켓 없이 커밋"
 
 **Step C-2: 직접 입력**
 
@@ -98,17 +98,17 @@ git branch --show-current
 - questions[0].multiSelect: false
 - questions[0].options:
   - label: "직접 입력", description: "티켓 ID를 입력하세요"
-  - label: "새 서브태스크 생성", description: "부모 스토리 아래 서브태스크를 새로 만듭니다"
+  - label: "새 Task 생성", description: "Jira에 새로운 독립 Task 이슈를 생성합니다"
 
-**Step C-3: 새 서브태스크 생성**
+**Step C-3: 새 Task 생성**
 
-"새 서브태스크 생성" 선택 시 **→ AskUserQuestion 도구를 즉시 호출**합니다:
-- questions[0].question: "서브태스크를 생성할 부모 스토리 ID를 입력하세요"
-- questions[0].header: "부모 스토리 ID"
+"새 Task 생성" 선택 시 **→ AskUserQuestion 도구를 즉시 호출**합니다:
+- questions[0].question: "생성할 Task의 제목을 입력하세요"
+- questions[0].header: "새 Task 제목"
 - questions[0].multiSelect: false
 - questions[0].options: label: "직접 입력"
 
-입력 후 `mcp__claude_ai_Atlassian__createJiraIssue`로 서브태스크 생성.
+입력 후 `mcp__claude_ai_Atlassian__createJiraIssue`로 Task 생성 (issuetype: Task, parent 없음).
 "없음 — 티켓 없이 커밋" 선택 시: Refs 없이 커밋 진행.
 
 #### 0.4 MCP 연결 실패 처리
