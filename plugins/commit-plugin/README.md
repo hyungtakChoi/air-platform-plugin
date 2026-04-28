@@ -1,7 +1,26 @@
 # commit-plugin
 
-AIR Platform 팀 전용 커밋 자동화 플러그인입니다.
+커밋 자동화 플러그인입니다.
 git diff를 분석하여 커밋 메시지를 자동 생성하고, Jira 티켓에 작업 내용을 기록합니다.
+
+## 프로젝트 설정
+
+프로젝트 루트에 `.claude/commit-plugin.config.json` 파일을 생성하세요:
+
+```bash
+mkdir -p .claude
+cat > .claude/commit-plugin.config.json << 'EOF'
+{
+  "jiraProjectKey": "BI"
+}
+EOF
+```
+
+| 설정 키 | 설명 | 필수 여부 |
+|---------|------|-----------|
+| `jiraProjectKey` | 브랜치에 Jira 티켓 ID가 없을 때 사용할 프로젝트 키 | 권장 |
+
+> **보안**: `.claude/commit-plugin.config.json`을 `.gitignore`에 추가하세요.
 
 ## 사용법
 

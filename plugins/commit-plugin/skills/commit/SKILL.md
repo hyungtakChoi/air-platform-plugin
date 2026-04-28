@@ -26,6 +26,22 @@ version: 3.0.0
 
 ## 1. 워크플로우
 
+### Step 0.0: 설정 파일 로드
+
+`.claude/commit-plugin.config.json` 파일을 읽습니다. 없으면 기본값을 사용합니다.
+
+```json
+{
+  "jiraProjectKey": "BI"
+}
+```
+
+| 설정 키 | 설명 | 기본값 |
+|---------|------|--------|
+| `jiraProjectKey` | 브랜치에 티켓 ID 없을 때 사용할 Jira 프로젝트 키 | 없음 (필수) |
+
+---
+
 ### Step 0: Jira 티켓 연결
 
 브랜치명에서 티켓 ID를 추출합니다.
@@ -46,15 +62,18 @@ git branch --show-current
 **이슈 타입이 Task / Sub-task인 경우:**
 
 Use `AskUserQuestion` with:
-- question: "이 티켓이 맞나요?"
+- question: "브랜치에서 감지된 Jira 티켓입니다. 이 티켓으로 연결하시겠습니까?"
 - header: "Jira 티켓 확인"
 - multiSelect: false
 - options:
   - label: "{티켓ID}: {요약}", description: "타입: {type} | 상태: {status}"
-  - label: "아니야 — 새로 연결", description: "다른 티켓을 만들거나 검색합니다"
+  - label: "다른 티켓 선택", description: "새 티켓을 만들거나 다른 티켓을 연결합니다"
 
-→ "맞아" 선택 시: 해당 티켓 사용 → Step 0.5로
-→ "아니야" 선택 시: [새로 만들기 로직]으로
+→ 티켓 선택 시: 해당 티켓 사용
+  - 티켓의 `description` 필드가 비어있으면: LLM이 git diff 기반으로 description 자동 생성 → `mcp__claude_ai_Atlassian__editJiraIssue`로 업데이트
+  - description이 이미 있으면: 건드리지 않음
+  → Step 0.5로
+→ "다른 티켓 선택" 선택 시: [새로 만들기 로직]으로
 
 **이슈 타입이 Story / Epic인 경우:**
 
@@ -67,7 +86,10 @@ Use `AskUserQuestion` with:
 - multiSelect: true
 - options: 각 서브태스크 (label: 티켓ID, description: 요약) + "없어 — 새로 만들기" + "스토리 자체만 연결"
 
-→ 서브태스크 선택 시: 선택된 티켓들 사용 → Step 0.5로
+→ 서브태스크 선택 시: 선택된 티켓들 사용
+  - 각 티켓의 `description`이 비어있으면: LLM이 git diff 기반으로 자동 생성 → `mcp__claude_ai_Atlassian__editJiraIssue`로 업데이트
+  - description이 이미 있으면: 건드리지 않음
+  → Step 0.5로
 → "스토리 자체만 연결" 선택 시: 스토리 티켓 사용 → Step 0.5로
 → "없어 — 새로 만들기" 선택 시: [새로 만들기 로직]으로
 
@@ -82,7 +104,8 @@ Use `AskUserQuestion` with:
 #### 새로 만들기 로직 (공통)
 
 1. `git diff --staged` 또는 `git diff`로 변경사항을 미리 분석합니다
-2. `mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql`로 현재 프로젝트의 활성 스토리/에픽 목록 조회:
+2. 프로젝트 키 결정: 브랜치에서 추출한 키 → 없으면 `config.jiraProjectKey` 사용. 둘 다 없으면 사용자에게 입력 요청
+3. `mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql`로 현재 프로젝트의 활성 스토리/에픽 목록 조회:
    - JQL: `project = {projectKey} AND issuetype in (Story, Epic) AND sprint in openSprints() ORDER BY updated DESC`
    - 스프린트가 없으면 폴백: `project = {projectKey} AND issuetype in (Story, Epic) AND updated >= -30d ORDER BY updated DESC`
 3. LLM이 변경사항과 스토리 목록을 비교하여 **관련도 순으로 정렬**합니다
@@ -334,6 +357,7 @@ Generated-By: Claude Code
 - Use `mcp__claude_ai_Atlassian__getJiraIssue` to fetch ticket info from branch name
 - Use `mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql` to list subtasks or search stories
 - Use `mcp__claude_ai_Atlassian__createJiraIssue` to create sub-tasks or tasks
+- Use `mcp__claude_ai_Atlassian__editJiraIssue` to update description on existing tickets when empty
 - Use `mcp__claude_ai_Atlassian__addCommentToJiraIssue` to post commit summary to Jira after commit
 - Use `mcp__claude_ai_Atlassian__addWorklogToJiraIssue` to log work time after commit
 - Use `git branch --show-current`, `git status`, `git diff --staged` for git state
