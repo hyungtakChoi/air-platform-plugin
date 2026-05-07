@@ -84,14 +84,14 @@ Use `AskUserQuestion` with:
 - question: "이 스토리의 어떤 서브태스크와 연결하시겠어요?"
 - header: "서브태스크 선택"
 - multiSelect: true
-- options: 각 서브태스크 (label: 티켓ID, description: 요약) + "없어 — 새로 만들기" + "스토리 자체만 연결"
+- options: 각 서브태스크 (label: 티켓ID, description: 요약) + "없음 — 새로 만들기" + "스토리 자체만 연결"
 
 → 서브태스크 선택 시: 선택된 티켓들 사용
   - 각 티켓의 `description`이 비어있으면: LLM이 git diff 기반으로 자동 생성 → `mcp__claude_ai_Atlassian__editJiraIssue`로 업데이트
   - description이 이미 있으면: 건드리지 않음
   → Step 0.5로
 → "스토리 자체만 연결" 선택 시: 스토리 티켓 사용 → Step 0.5로
-→ "없어 — 새로 만들기" 선택 시: [새로 만들기 로직]으로
+→ "없음 — 새로 만들기" 선택 시: [새로 만들기 로직]으로
 
 ---
 
@@ -118,7 +118,7 @@ Use `AskUserQuestion` with:
 - question: "어떤 스토리 하위에 서브태스크를 만들까요? (변경사항 기반으로 관련도 순 정렬)"
 - header: "스토리 선택"
 - multiSelect: false
-- options: 관련도 순 스토리 목록 (label: 티켓ID, description: 요약) + "없어 — 독립 Task 생성" + "티켓 없이 커밋"
+- options: 관련도 순 스토리 목록 (label: 티켓ID, description: 요약) + "없음 — 독립 Task 생성" + "티켓 없이 커밋"
 
 **스토리 선택 시 → 서브태스크 생성:**
 
@@ -142,7 +142,7 @@ Use `AskUserQuestion` with:
 - assignee: {조회한 currentUser accountId} (없으면 생략)
 - description: LLM이 git diff 기반으로 자동 생성 — 변경된 파일, 작업 목적, 주요 변경 내용을 2-3문장으로 요약
 
-**"없어 — 독립 Task 생성" 선택 시:**
+**"없음 — 독립 Task 생성" 선택 시:**
 
 LLM이 변경사항을 기반으로 Task 제목을 자동 제안합니다.
 
