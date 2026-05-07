@@ -121,12 +121,14 @@ Use `AskUserQuestion` with:
 LLM이 변경사항을 기반으로 서브태스크 제목을 자동 제안합니다.
 
 Use `AskUserQuestion` with:
-- question: "서브태스크 제목을 확인하세요 (수정 가능)"
+- question: "서브태스크 제목을 확인하세요. AI 제안 제목을 선택하거나 'Type something'에 직접 입력하세요."
 - header: "서브태스크 제목"
 - multiSelect: false
 - options:
   - label: "{LLM이 제안한 제목}", description: "AI 제안"
-  - label: "직접 입력", description: "제목을 직접 입력합니다"
+
+- 사용자가 AI 제안을 선택하거나 "Type something" 빈칸에 직접 입력합니다
+- 직접 입력이 있으면 해당 텍스트를 제목으로 사용합니다
 
 확인 후 `mcp__claude_ai_Atlassian__createJiraIssue`로 서브태스크 생성:
 - issuetype: Sub-task
@@ -140,12 +142,14 @@ Use `AskUserQuestion` with:
 LLM이 변경사항을 기반으로 Task 제목을 자동 제안합니다.
 
 Use `AskUserQuestion` with:
-- question: "Task 제목을 확인하세요 (수정 가능)"
+- question: "Task 제목을 확인하세요. AI 제안 제목을 선택하거나 'Type something'에 직접 입력하세요."
 - header: "Task 제목"
 - multiSelect: false
 - options:
   - label: "{LLM이 제안한 제목}", description: "AI 제안"
-  - label: "직접 입력", description: "제목을 직접 입력합니다"
+
+- 사용자가 AI 제안을 선택하거나 "Type something" 빈칸에 직접 입력합니다
+- 직접 입력이 있으면 해당 텍스트를 제목으로 사용합니다
 
 확인 후 `mcp__claude_ai_Atlassian__createJiraIssue`로 Task 생성:
 - issuetype: Task
@@ -183,14 +187,15 @@ Jira 티켓이 연결된 경우에만 Use `AskUserQuestion` with:
 ### Step 0.6: Jira 추가 컨텍스트 입력
 
 Jira 티켓이 연결된 경우에만 Use `AskUserQuestion` with:
-- question: "Jira 티켓에 남길 추가 컨텍스트를 입력하세요 (커밋 메시지에 담지 못한 배경, 시도한 방법, 주의사항 등)"
+- question: "Jira 티켓에 남길 추가 컨텍스트가 있으면 아래에 직접 입력하세요. (작업 배경, 이슈 원인, 시도한 방법, 주의사항 등 — 커밋 메시지에 담지 못한 내용)"
 - header: "추가 컨텍스트"
 - multiSelect: false
 - options:
-  - label: "직접 입력", description: "작업 배경, 이슈 원인, 주의사항 등 자유 입력"
+  - label: "스킵", description: "추가 컨텍스트 없이 진행합니다"
 
-- 입력은 **필수**이며 스킵할 수 없습니다
-- 사용자가 입력한 원문을 LLM이 자동으로 정제하여 Jira 코멘트에 등록합니다 (문장 다듬기, 구조화, 의도 보존)
+- 사용자가 "Type something" 빈칸에 직접 입력하거나 "스킵"을 선택합니다
+- 입력이 있으면 LLM이 자동으로 정제하여 Jira 코멘트에 등록합니다 (문장 다듬기, 구조화, 의도 보존)
+- "스킵" 선택 시 추가 컨텍스트 없이 진행합니다
 
 ---
 
@@ -290,7 +295,22 @@ Step 0에서 Jira 티켓이 연결된 경우, **커밋 직후** 각 티켓에 �
 
 작업 시간을 입력한 경우 `mcp__claude_ai_Atlassian__addWorklogToJiraIssue`로 worklog 등록.
 
-#### 6.3 실패 처리
+#### 6.3 Jira 상태 변경
+
+Use `AskUserQuestion` with:
+- question: "Jira 티켓 상태를 '리뷰 (In Review)'로 변경하시겠습니까?"
+- header: "Jira 상태 변경"
+- multiSelect: false
+- options:
+  - label: "리뷰로 변경", description: "티켓 상태를 In Review로 전환합니다"
+  - label: "유지", description: "현재 상태를 그대로 유지합니다"
+
+→ "리뷰로 변경" 선택 시: 연결된 각 티켓에 대해 `mcp__claude_ai_Atlassian__transitionJiraIssue`를 호출합니다
+  - 전환 가능한 transition 목록을 먼저 조회하여 "In Review" 또는 "리뷰"에 해당하는 transitionId를 찾아 사용합니다
+  - 해당 transition이 없으면 경고 출력 후 스킵
+→ "유지" 선택 시: 상태 변경 없이 완료
+
+#### 6.4 실패 처리
 
 Jira 등록 실패 시 경고 메시지만 출력. 커밋은 이미 완료되어 롤백하지 않음.
 
@@ -344,10 +364,10 @@ Generated-By: Claude Code
 
 ### Jira 연동
 
-| 티켓 | 코멘트 | Worklog |
-|------|--------|---------|
-| BI-33 | ✅ 등록됨 | 2h |
-| BI-34 | ✅ 등록됨 | - |
+| 티켓 | 코멘트 | Worklog | 상태 |
+|------|--------|---------|------|
+| BI-33 | ✅ 등록됨 | 2h | 리뷰로 변경 |
+| BI-34 | ✅ 등록됨 | - | 유지 |
 ```
 
 ---
@@ -360,6 +380,7 @@ Generated-By: Claude Code
 - Use `mcp__claude_ai_Atlassian__editJiraIssue` to update description on existing tickets when empty
 - Use `mcp__claude_ai_Atlassian__addCommentToJiraIssue` to post commit summary to Jira after commit
 - Use `mcp__claude_ai_Atlassian__addWorklogToJiraIssue` to log work time after commit
+- Use `mcp__claude_ai_Atlassian__transitionJiraIssue` to change ticket status to In Review after commit
 - Use `git branch --show-current`, `git status`, `git diff --staged` for git state
 - Use `git commit -m` with HEREDOC for safe multiline commit messages
 - Use `git rev-parse HEAD` after commit to capture commit ID
