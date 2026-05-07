@@ -105,7 +105,11 @@ Use `AskUserQuestion` with:
 
 1. `git diff --staged` 또는 `git diff`로 변경사항을 미리 분석합니다
 2. 프로젝트 키 결정: 브랜치에서 추출한 키 → 없으면 `config.jiraProjectKey` 사용. 둘 다 없으면 사용자에게 입력 요청
-3. `mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql`로 현재 프로젝트의 활성 스토리/에픽 목록 조회:
+3. 현재 사용자의 accountId 조회 (담당자 지정용):
+   - JQL: `assignee = currentUser() AND project = {projectKey} ORDER BY updated DESC`
+   - 첫 번째 결과의 `assignee.accountId`를 저장해 둡니다 (이후 createJiraIssue의 assignee에 사용)
+   - 결과 없으면 assignee 없이 생성
+4. `mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql`로 현재 프로젝트의 활성 스토리/에픽 목록 조회:
    - JQL: `project = {projectKey} AND issuetype in (Story, Epic) AND sprint in openSprints() ORDER BY updated DESC`
    - 스프린트가 없으면 폴백: `project = {projectKey} AND issuetype in (Story, Epic) AND updated >= -30d ORDER BY updated DESC`
 3. LLM이 변경사항과 스토리 목록을 비교하여 **관련도 순으로 정렬**합니다
@@ -135,6 +139,7 @@ Use `AskUserQuestion` with:
 - parent: {선택한 스토리 ID}
 - summary: {확인된 제목}
 - project: {projectKey}
+- assignee: {조회한 currentUser accountId} (없으면 생략)
 - description: LLM이 git diff 기반으로 자동 생성 — 변경된 파일, 작업 목적, 주요 변경 내용을 2-3문장으로 요약
 
 **"없어 — 독립 Task 생성" 선택 시:**
@@ -155,6 +160,7 @@ Use `AskUserQuestion` with:
 - issuetype: Task
 - summary: {확인된 제목}
 - project: {projectKey}
+- assignee: {조회한 currentUser accountId} (없으면 생략)
 - description: LLM이 git diff 기반으로 자동 생성 — 변경된 파일, 작업 목적, 주요 변경 내용을 2-3문장으로 요약
 
 **"티켓 없이 커밋" 선택 시:** Refs 없이 커밋 진행
@@ -180,7 +186,6 @@ Jira 티켓이 연결된 경우에만 Use `AskUserQuestion` with:
   - label: "3h", description: "3시간"
   - label: "4h", description: "4시간"
   - label: "직접 입력", description: "정수 시간 단위로 입력 (예: 5h, 6h)"
-  - label: "스킵", description: "worklog 기록 안 함"
 
 ---
 
@@ -293,7 +298,7 @@ Step 0에서 Jira 티켓이 연결된 경우, **커밋 직후** 각 티켓에 �
 
 #### 6.2 Worklog 등록
 
-작업 시간을 입력한 경우 `mcp__claude_ai_Atlassian__addWorklogToJiraIssue`로 worklog 등록.
+`mcp__claude_ai_Atlassian__addWorklogToJiraIssue`로 worklog 등록.
 
 #### 6.3 Jira 상태 변경
 
