@@ -1,5 +1,0 @@
-{
-  "name": "start-task-plugin",
-  "description": "작업 시작 시 Jira 티켓 생성 및 In Progress 전환 플러그인",
-  "version": "1.0.0"
-}

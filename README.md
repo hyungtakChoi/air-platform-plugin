@@ -1,69 +1,111 @@
-# AIR Platform Plugin
+# air-platform-kit
 
-AIR Platform 팀 전용 Claude Code 플러그인입니다.
-`/commit` 하나만 실행하면 Jira 티켓 연동, 커밋 메시지 자동 생성이 처리됩니다.
-
-## 플러그인
-
-| 플러그인 | 명령어 | 버전 | 설명 |
-|---|---|---|---|
-| commit-plugin | `/commit` | v3.0.0 | 커밋 메시지 자동 생성 + Jira 티켓 연동 |
-
----
+AIR Platform 팀 개발 생산성 스킬 모음입니다.
 
 ## 설치
 
-### 1. 마켓플레이스 등록 (한 번만)
-
 ```bash
-/plugin marketplace add https://github.com/hyungtakChoi/air-platform-plugin.git
+/plugin marketplace add https://<TOKEN>@github.com/air-platform-aie/air-platform-kit.git
+/plugin install air-platform-kit@air-platform-kit
 ```
 
-### 2. 플러그인 설치
-
-```bash
-/plugin install commit-plugin@air-platform
-```
-
-### 3. Claude Code 재시작 후 사용
-
-```bash
-/commit-plugin:commit
-```
-
----
-
-## commit-plugin 사용 흐름
-
-```
-/commit 실행
-  → 브랜치에서 Jira 티켓 ID 추출
-  │
-  ├── 티켓 있음 (Task/Sub-task) → 티켓 확인
-  │     ├── 맞아 → 해당 티켓 연결
-  │     └── 아니야 → 새로 만들기
-  │
-  ├── 티켓 있음 (Story/Epic) → 서브태스크 목록 선택 (복수 선택 가능)
-  │     ├── 선택 → 해당 서브태스크 연결
-  │     └── 없어 → 새로 만들기
-  │
-  └── 티켓 없음 → 새로 만들기
-        → LLM이 변경사항 분석 + 스프린트 스토리 목록 비교 → 관련 스토리 추천
-        ├── 스토리 선택 → LLM이 서브태스크 제목 제안 → 서브태스크 생성
-        └── 없어 → LLM이 Task 제목 제안 → 독립 Task 생성
-
-  → 작업 시간 입력 (선택, 스킵 가능)
-  → 추가 컨텍스트 입력 (필수)
-  → 커밋 메시지 자동 생성 → git commit
-  → Jira 코멘트 + worklog 등록
-```
-
----
+> **SAML SSO 토큰 발급**: https://github.com/settings/tokens → "Configure SSO" → "mzcair" → "Authorize"
 
 ## 업데이트
 
 ```bash
-/plugin marketplace update air-platform
-/plugin install commit-plugin@air-platform
-# Claude Code 재시작
+/plugin marketplace update air-platform-kit
+/reload-plugins
 ```
+
+---
+
+## 스킬 목록
+
+### `/air-platform-kit:commit`
+
+Git 커밋 메시지 자동 생성 + Jira 이슈 연동
+
+```bash
+/air-platform-kit:commit
+```
+
+**흐름:**
+```
+브랜치 티켓 추출
+  ├── Task/Sub-task → 티켓 확인
+  ├── Story/Epic   → 서브태스크 목록에서 선택 또는 새로 생성
+  └── 없음         → 스프린트 스토리 추천 → 서브태스크 or Task 생성
+  ↓
+작업 시간 입력 (1h 단위)
+  ↓
+추가 컨텍스트 입력 (선택)
+  ↓
+커밋 메시지 자동 생성 → git commit
+  ↓
+Jira 코멘트 + worklog 등록
+  ↓
+Jira 상태 변경 여부 확인 (리뷰로 변경)
+```
+
+**커밋 메시지 포맷:**
+```
+<prefix>[(<scope>)]: <요약 (한글, 50자 이내)>
+
+<상세 설명>
+- 변경 사항 1
+
+Refs: BRAIN-100
+
+Generated-By: Claude Code
+```
+
+| Prefix | 용도 |
+|--------|------|
+| `feat` | 새로운 기능 |
+| `fix` | 버그 수정 |
+| `refactor` | 리팩토링 |
+| `chore` | 설정/의존성 변경 |
+
+---
+
+### `/air-platform-kit:start-task`
+
+작업 시작 시 Jira 티켓 생성 및 In Progress 전환
+
+```bash
+/air-platform-kit:start-task [작업 설명]
+```
+
+**흐름:**
+```
+브랜치 티켓 추출
+  ├── Story/Epic → 서브태스크 목록 확인 → 선택 또는 새로 생성
+  ├── Task       → 해당 티켓 In Progress 전환
+  └── 없음       → 스프린트 스토리 추천 → 서브태스크 or Task 생성
+  ↓
+생성된 티켓 In Progress 전환
+```
+
+---
+
+## 프로젝트 설정
+
+프로젝트 루트에 `.claude/commit-plugin.config.json` 생성:
+
+```bash
+mkdir -p .claude
+cat > .claude/commit-plugin.config.json << 'EOF'
+{
+  "jiraProjectKey": "BRAIN"
+}
+EOF
+```
+
+> **보안**: `.claude/commit-plugin.config.json`을 `.gitignore`에 추가하세요.
+
+## 요구사항
+
+- Claude Code MCP Atlassian 연동 설정 필요
+- Jira 프로젝트 접근 권한 필요
+- MCP 미설치 시 Jira 연동 없이 커밋만 진행 (commit 스킬)
