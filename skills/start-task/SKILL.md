@@ -1,7 +1,7 @@
 ---
 name: start-task
 description: 작업 시작 시 Jira 티켓 생성 및 In Progress 전환
-argument-hint: "[작업 설명 (선택)]"
+argument-hint: "<작업 설명>"
 level: 2
 ---
 
@@ -39,7 +39,7 @@ version: 1.0.0
 인자(`{{ARGUMENTS}}`)가 있으면 그대로 사용합니다.
 
 인자가 없으면 Use `AskUserQuestion` with:
-- question: "어떤 작업을 시작하시나요? 작업 내용을 간략히 설명해 주세요."
+- question: "어떤 작업을 시작하시나요? 'Type something'에 작업 내용을 입력하세요. (스토리 추천과 티켓 제목 생성에 사용됩니다)"
 - header: "작업 설명"
 - multiSelect: false
 - options:
@@ -47,6 +47,7 @@ version: 1.0.0
 
 - 사용자가 "Type something" 빈칸에 직접 입력하거나 "취소"를 선택합니다
 - "취소" 선택 시 종료
+- 빈 텍스트로 제출 시 다시 입력 요청 — 작업 설명은 필수입니다
 
 ---
 
