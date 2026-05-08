@@ -32,22 +32,27 @@ AIR Platform 팀 개발 생산성 스킬 모음입니다.
 
 ```mermaid
 flowchart TD
-    A([/start-task &lt;작업 설명&gt;]) --> B[브랜치명에서 티켓 ID 추출]
+    A([/start-task]) --> B{작업 설명\n인자 있음?}
+    B -- 있음 --> D
+    B -- 없음 --> C[AskUserQuestion\n작업 내용 입력 필수]
+    C -- 입력 --> D
+    C -- 취소 --> Z([종료])
 
-    B --> C{브랜치 티켓 유형}
+    D[브랜치명에서 티켓 ID 추출] --> E{브랜치 티켓 유형}
 
-    C -- "Task / Sub-task" --> K[해당 티켓 In Progress 전환]
+    E -- "Task / Sub-task" --> K[해당 티켓 In Progress 전환]
 
-    C -- "Story / Epic" --> L[서브태스크 목록 조회]
+    E -- "Story / Epic" --> L[서브태스크 목록 조회]
     L --> M{서브태스크 선택}
     M -- 기존 서브태스크 선택 --> K
     M -- "없음 → 새로 만들기" --> N
+    M -- 취소 --> Z
 
-    C -- "티켓 없음" --> N[스프린트 스토리 조회\nLLM 관련도 순 정렬]
+    E -- "티켓 없음" --> N[스프린트 스토리 조회\nLLM 관련도 순 정렬]
     N --> P{스토리 선택}
     P -- 스토리 선택 --> Q[하위 이슈 제목 제안 → 생성]
     P -- "없음 → 독립 Task" --> R[Task 제목 제안 → 생성]
-    P -- 취소 --> Z([종료])
+    P -- 취소 --> Z
 
     Q --> K
     R --> K
