@@ -133,8 +133,8 @@ Use `AskUserQuestion` with:
 
 - 사용자가 AI 제안을 선택하거나 "Type something" 빈칸에 직접 입력합니다
 
-`mcp__claude_ai_Atlassian__createJiraIssue`로 서브태스크 생성:
-- issuetype: Sub-task
+`mcp__claude_ai_Atlassian__createJiraIssue`로 하위 이슈 생성:
+- issuetype: 부모 이슈의 기존 자식 이슈 타입과 동일하게 사용 (Sub-task 또는 Task). 자식이 없으면 Sub-task 시도 → 실패 시 Task로 폴백
 - parent: {선택한 스토리 ID 또는 브랜치에서 추출한 Story/Epic ID}
 - summary: {확인된 제목}
 - project: {projectKey}
